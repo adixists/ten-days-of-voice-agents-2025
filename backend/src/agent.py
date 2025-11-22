@@ -1,4 +1,8 @@
 import logging
+import json
+import os
+from datetime import datetime
+from typing import Annotated
 
 from dotenv import load_dotenv
 from livekit.agents import (
@@ -12,8 +16,8 @@ from livekit.agents import (
     cli,
     metrics,
     tokenize,
-    # function_tool,
-    # RunContext
+    function_tool,
+    RunContext
 )
 from livekit.plugins import murf, silero, google, deepgram, noise_cancellation
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
@@ -23,31 +27,77 @@ logger = logging.getLogger("agent")
 load_dotenv(".env.local")
 
 
-class Assistant(Agent):
+class CoffeeBaristaAssistant(Agent):
     def __init__(self) -> None:
         super().__init__(
-            instructions="""You are a helpful voice AI assistant. The user is interacting with you via voice, even if you perceive the conversation as text.
-            You eagerly assist users with their questions by providing information from your extensive knowledge.
-            Your responses are concise, to the point, and without any complex formatting or punctuation including emojis, asterisks, or other symbols.
-            You are curious, friendly, and have a sense of humor.""",
+            instructions="""You are a friendly and enthusiastic barista working at 'Brew Haven Coffee Shop'. The user is interacting with you via voice to place a coffee order.
+            
+            Your job is to:
+            1. Greet customers warmly and ask what they'd like to order
+            2. Collect the following information for their order:
+               - Drink type (e.g., latte, cappuccino, espresso, americano, mocha, cold brew)
+               - Size (small, medium, large)
+               - Milk preference (whole milk, skim milk, oat milk, almond milk, soy milk, or no milk)
+               - Any extras (whipped cream, extra shot, vanilla syrup, caramel, chocolate drizzle, etc.)
+               - Customer's name for the order
+            
+            3. Ask clarifying questions one at a time if any information is missing
+            4. Confirm the order details before finalizing
+            5. Once you have ALL the information, use the save_order tool to save it
+            
+            Be conversational, friendly, and make coffee recommendations if asked. Keep responses concise and natural, as if speaking to a customer at the counter.
+            Avoid complex formatting, emojis, or asterisks in your responses.""",
         )
 
-    # To add tools, use the @function_tool decorator.
-    # Here's an example that adds a simple weather tool.
-    # You also have to add `from livekit.agents import function_tool, RunContext` to the top of this file
-    # @function_tool
-    # async def lookup_weather(self, context: RunContext, location: str):
-    #     """Use this tool to look up current weather information in the given location.
-    #
-    #     If the location is not supported by the weather service, the tool will indicate this. You must tell the user the location's weather is unavailable.
-    #
-    #     Args:
-    #         location: The location to look up weather information for (e.g. city name)
-    #     """
-    #
-    #     logger.info(f"Looking up weather for {location}")
-    #
-    #     return "sunny with a temperature of 70 degrees."
+    @function_tool
+    async def save_order(
+        self,
+        context: RunContext,
+        drink_type: Annotated[str, "The type of coffee drink ordered"],
+        size: Annotated[str, "The size of the drink (small, medium, or large)"],
+        milk: Annotated[str, "The milk preference or 'none' if no milk"],
+        extras: Annotated[str, "Comma-separated list of extras or 'none' if no extras"],
+        name: Annotated[str, "Customer's name for the order"],
+    ):
+        """Save the completed coffee order to a JSON file. Use this tool ONLY when you have collected all order information from the customer.
+        
+        Args:
+            drink_type: Type of coffee drink (e.g., latte, cappuccino, espresso)
+            size: Size of the drink (small, medium, large)
+            milk: Milk type (whole, skim, oat, almond, soy) or 'none'
+            extras: Extras like whipped cream, syrups, extra shot (comma-separated) or 'none'
+            name: Customer's name
+        """
+        
+        # Parse extras into a list
+        extras_list = [e.strip() for e in extras.split(",")] if extras.lower() != "none" else []
+        
+        order = {
+            "drinkType": drink_type,
+            "size": size,
+            "milk": milk if milk.lower() != "none" else "none",
+            "extras": extras_list,
+            "name": name,
+            "timestamp": datetime.now().isoformat(),
+            "shop": "Brew Haven Coffee Shop"
+        }
+        
+        # Create orders directory if it doesn't exist
+        orders_dir = os.path.join(os.path.dirname(__file__), "..", "orders")
+        os.makedirs(orders_dir, exist_ok=True)
+        
+        # Save to JSON file with timestamp
+        filename = f"order_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{name.replace(' ', '_')}.json"
+        filepath = os.path.join(orders_dir, filename)
+        
+        with open(filepath, "w") as f:
+            json.dump(order, indent=2, fp=f)
+        
+        logger.info(f"Order saved: {order}")
+        
+        return f"Perfect! Your order has been saved. That's a {size} {drink_type} with {milk} milk" + (
+            f" and {', '.join(extras_list)}" if extras_list else ""
+        ) + f" for {name}. Your order will be ready shortly!"
 
 
 def prewarm(proc: JobProcess):
@@ -123,7 +173,7 @@ async def entrypoint(ctx: JobContext):
 
     # Start the session, which initializes the voice pipeline and warms up the models
     await session.start(
-        agent=Assistant(),
+        agent=CoffeeBaristaAssistant(),
         room=ctx.room,
         room_input_options=RoomInputOptions(
             # For telephony applications, use `BVCTelephony` for best results
