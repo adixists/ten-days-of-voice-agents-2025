@@ -27,77 +27,183 @@ logger = logging.getLogger("agent")
 load_dotenv(".env.local")
 
 
-class CoffeeBaristaAssistant(Agent):
+class HealthWellnessCompanion(Agent):
     def __init__(self) -> None:
         super().__init__(
-            instructions="""You are a friendly and enthusiastic barista working at 'Brew Haven Coffee Shop'. The user is interacting with you via voice to place a coffee order.
+            instructions="""You are Wellness Buddy, a caring and supportive health and wellness voice companion powered by HealthifyMe. The user is interacting with you via voice.
             
-            Your job is to:
-            1. Greet customers warmly and ask what they'd like to order
-            2. Collect the following information for their order:
-               - Drink type (e.g., latte, cappuccino, espresso, americano, mocha, cold brew)
-               - Size (small, medium, large)
-               - Milk preference (whole milk, skim milk, oat milk, almond milk, soy milk, or no milk)
-               - Any extras (whipped cream, extra shot, vanilla syrup, caramel, chocolate drizzle, etc.)
-               - Customer's name for the order
+            Your role is to:
+            1. Greet users warmly and ask how you can help with their health and wellness journey today
+            2. Assist with various health & wellness needs:
+               - Log meals and track nutrition (calories, protein, carbs, fats)
+               - Set and track fitness goals (steps, workouts, water intake)
+               - Provide health tips and wellness advice
+               - Track sleep patterns and quality
+               - Monitor weight and body metrics
+               - Offer motivation and encouragement
             
-            3. Ask clarifying questions one at a time if any information is missing
-            4. Confirm the order details before finalizing
-            5. Once you have ALL the information, use the save_order tool to save it
+            3. Collect detailed information based on user's needs:
+               For Meal Logging:
+               - Meal type (breakfast, lunch, dinner, snack)
+               - Food items consumed
+               - Portion sizes (approximate)
+               - Time of meal
+               
+               For Fitness Goals:
+               - Goal type (weight loss, muscle gain, general fitness, etc.)
+               - Current activity level
+               - Target metrics (weight, steps, workout duration)
+               - Timeline
+               
+               For Health Tracking:
+               - Metric type (weight, sleep hours, water intake, etc.)
+               - Current value
+               - Date/time
             
-            Be conversational, friendly, and make coffee recommendations if asked. Keep responses concise and natural, as if speaking to a customer at the counter.
-            Avoid complex formatting, emojis, or asterisks in your responses.""",
+            4. Ask clarifying questions naturally, one at a time
+            5. Provide personalized encouragement and health tips
+            6. Use the appropriate tool to save user data once all information is collected
+            7. Always ask for the user's name if not yet provided
+            
+            Be empathetic, motivating, and knowledgeable about health and wellness. Keep responses conversational and supportive.
+            Avoid medical diagnoses - encourage users to consult healthcare professionals for medical concerns.
+            No complex formatting, emojis, or asterisks in your responses.""",
         )
 
     @function_tool
-    async def save_order(
+    async def log_meal(
         self,
         context: RunContext,
-        drink_type: Annotated[str, "The type of coffee drink ordered"],
-        size: Annotated[str, "The size of the drink (small, medium, or large)"],
-        milk: Annotated[str, "The milk preference or 'none' if no milk"],
-        extras: Annotated[str, "Comma-separated list of extras or 'none' if no extras"],
-        name: Annotated[str, "Customer's name for the order"],
+        meal_type: Annotated[str, "Type of meal: breakfast, lunch, dinner, or snack"],
+        food_items: Annotated[str, "Comma-separated list of food items consumed"],
+        portions: Annotated[str, "Portion sizes for each item (e.g., 1 cup, 200g, 2 pieces)"],
+        estimated_calories: Annotated[int, "Estimated total calories for the meal"],
+        meal_time: Annotated[str, "Time the meal was consumed (e.g., 8:00 AM, 1:30 PM)"],
+        user_name: Annotated[str, "User's name"],
     ):
-        """Save the completed coffee order to a JSON file. Use this tool ONLY when you have collected all order information from the customer.
+        """Log a meal with nutritional tracking. Use this when the user wants to record what they ate.
         
         Args:
-            drink_type: Type of coffee drink (e.g., latte, cappuccino, espresso)
-            size: Size of the drink (small, medium, large)
-            milk: Milk type (whole, skim, oat, almond, soy) or 'none'
-            extras: Extras like whipped cream, syrups, extra shot (comma-separated) or 'none'
-            name: Customer's name
+            meal_type: Type of meal (breakfast/lunch/dinner/snack)
+            food_items: List of foods eaten
+            portions: Portion sizes
+            estimated_calories: Approximate calorie count
+            meal_time: When the meal was consumed
+            user_name: User's name
         """
         
-        # Parse extras into a list
-        extras_list = [e.strip() for e in extras.split(",")] if extras.lower() != "none" else []
+        foods = [f.strip() for f in food_items.split(",")]
         
-        order = {
-            "drinkType": drink_type,
-            "size": size,
-            "milk": milk if milk.lower() != "none" else "none",
-            "extras": extras_list,
-            "name": name,
-            "timestamp": datetime.now().isoformat(),
-            "shop": "Brew Haven Coffee Shop"
+        meal_log = {
+            "type": "meal_log",
+            "mealType": meal_type,
+            "foodItems": foods,
+            "portions": portions,
+            "estimatedCalories": estimated_calories,
+            "mealTime": meal_time,
+            "userName": user_name,
+            "loggedAt": datetime.now().isoformat(),
+            "platform": "HealthifyMe Wellness Buddy"
         }
         
-        # Create orders directory if it doesn't exist
-        orders_dir = os.path.join(os.path.dirname(__file__), "..", "orders")
-        os.makedirs(orders_dir, exist_ok=True)
+        # Create health_logs directory
+        logs_dir = os.path.join(os.path.dirname(__file__), "..", "health_logs")
+        os.makedirs(logs_dir, exist_ok=True)
         
-        # Save to JSON file with timestamp
-        filename = f"order_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{name.replace(' ', '_')}.json"
-        filepath = os.path.join(orders_dir, filename)
+        filename = f"meal_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{user_name.replace(' ', '_')}.json"
+        filepath = os.path.join(logs_dir, filename)
         
         with open(filepath, "w") as f:
-            json.dump(order, indent=2, fp=f)
+            json.dump(meal_log, indent=2, fp=f)
         
-        logger.info(f"Order saved: {order}")
+        logger.info(f"Meal logged: {meal_log}")
         
-        return f"Perfect! Your order has been saved. That's a {size} {drink_type} with {milk} milk" + (
-            f" and {', '.join(extras_list)}" if extras_list else ""
-        ) + f" for {name}. Your order will be ready shortly!"
+        return f"Great job logging your {meal_type}, {user_name}! I've recorded {', '.join(foods)} with approximately {estimated_calories} calories. Keep up the healthy habits!"
+
+    @function_tool
+    async def set_fitness_goal(
+        self,
+        context: RunContext,
+        goal_type: Annotated[str, "Type of fitness goal (weight loss, muscle gain, endurance, etc.)"],
+        current_status: Annotated[str, "Current fitness level or metric"],
+        target_metric: Annotated[str, "Target to achieve (e.g., lose 10kg, run 5km, etc.)"],
+        timeline: Annotated[str, "Timeline to achieve goal (e.g., 3 months, 6 weeks)"],
+        user_name: Annotated[str, "User's name"],
+    ):
+        """Set a new fitness goal for tracking. Use this when user wants to establish health/fitness targets.
+        
+        Args:
+            goal_type: What kind of goal (weight loss, muscle gain, etc.)
+            current_status: Where they are now
+            target_metric: What they want to achieve
+            timeline: When they want to achieve it
+            user_name: User's name
+        """
+        
+        goal = {
+            "type": "fitness_goal",
+            "goalType": goal_type,
+            "currentStatus": current_status,
+            "targetMetric": target_metric,
+            "timeline": timeline,
+            "userName": user_name,
+            "createdAt": datetime.now().isoformat(),
+            "platform": "HealthifyMe Wellness Buddy"
+        }
+        
+        logs_dir = os.path.join(os.path.dirname(__file__), "..", "health_logs")
+        os.makedirs(logs_dir, exist_ok=True)
+        
+        filename = f"goal_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{user_name.replace(' ', '_')}.json"
+        filepath = os.path.join(logs_dir, filename)
+        
+        with open(filepath, "w") as f:
+            json.dump(goal, indent=2, fp=f)
+        
+        logger.info(f"Goal set: {goal}")
+        
+        return f"Excellent, {user_name}! I've set your {goal_type} goal: {target_metric} within {timeline}. Starting from {current_status}, you've got this! I'll be here to support you every step of the way."
+
+    @function_tool
+    async def track_health_metric(
+        self,
+        context: RunContext,
+        metric_type: Annotated[str, "Type of health metric (weight, sleep, water intake, steps, etc.)"],
+        value: Annotated[str, "The measured value with unit (e.g., 75kg, 7 hours, 2 liters, 8000 steps)"],
+        notes: Annotated[str, "Any additional notes or observations"],
+        user_name: Annotated[str, "User's name"],
+    ):
+        """Track a health metric. Use this when user reports health data like weight, sleep, water intake, etc.
+        
+        Args:
+            metric_type: What is being tracked
+            value: The measurement
+            notes: Additional context
+            user_name: User's name
+        """
+        
+        metric = {
+            "type": "health_metric",
+            "metricType": metric_type,
+            "value": value,
+            "notes": notes,
+            "userName": user_name,
+            "trackedAt": datetime.now().isoformat(),
+            "platform": "HealthifyMe Wellness Buddy"
+        }
+        
+        logs_dir = os.path.join(os.path.dirname(__file__), "..", "health_logs")
+        os.makedirs(logs_dir, exist_ok=True)
+        
+        filename = f"metric_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{user_name.replace(' ', '_')}.json"
+        filepath = os.path.join(logs_dir, filename)
+        
+        with open(filepath, "w") as f:
+            json.dump(metric, indent=2, fp=f)
+        
+        logger.info(f"Metric tracked: {metric}")
+        
+        return f"Perfect, {user_name}! I've tracked your {metric_type}: {value}. {notes if notes else 'Keep monitoring your progress!'} You're doing amazing!"
 
 
 def prewarm(proc: JobProcess):
@@ -173,7 +279,7 @@ async def entrypoint(ctx: JobContext):
 
     # Start the session, which initializes the voice pipeline and warms up the models
     await session.start(
-        agent=CoffeeBaristaAssistant(),
+        agent=HealthWellnessCompanion(),
         room=ctx.room,
         room_input_options=RoomInputOptions(
             # For telephony applications, use `BVCTelephony` for best results

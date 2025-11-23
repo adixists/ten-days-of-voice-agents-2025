@@ -1,0 +1,9 @@
+{
+  "type": "health_metric",
+  "metricType": "Sleep",
+  "value": "6.5 hours",
+  "notes": "Last night's sleep",
+  "userName": "Aditya",
+  "trackedAt": "2025-11-23T22:28:59.898795",
+  "platform": "HealthifyMe Wellness Buddy"
+}

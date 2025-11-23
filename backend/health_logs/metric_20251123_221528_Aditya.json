@@ -1,0 +1,9 @@
+{
+  "type": "health_metric",
+  "metricType": "water intake",
+  "value": "2-3 liters",
+  "notes": "Today",
+  "userName": "Aditya",
+  "trackedAt": "2025-11-23T22:15:28.861448",
+  "platform": "HealthifyMe Wellness Buddy"
+}
