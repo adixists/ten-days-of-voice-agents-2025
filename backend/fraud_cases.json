@@ -1,0 +1,47 @@
+[
+  {
+    "userName": "John",
+    "securityIdentifier": "12345",
+    "cardEnding": "4242",
+    "case": "pending_review",
+    "transactionName": "ABC Industry",
+    "transactionTime": "2025-11-25 14:30:00",
+    "transactionCategory": "e-commerce",
+    "transactionSource": "alibaba.com",
+    "transactionAmount": "$149.99",
+    "location": "China",
+    "securityQuestion": "What is your mother's maiden name?",
+    "securityAnswer": "Smith",
+    "outcomeNote": ""
+  },
+  {
+    "userName": "Sarah",
+    "securityIdentifier": "67890",
+    "cardEnding": "5678",
+    "case": "pending_review",
+    "transactionName": "XYZ Electronics",
+    "transactionTime": "2025-11-25 09:15:00",
+    "transactionCategory": "electronics",
+    "transactionSource": "amazon.com",
+    "transactionAmount": "$899.99",
+    "location": "United States",
+    "securityQuestion": "What city were you born in?",
+    "securityAnswer": "Boston",
+    "outcomeNote": ""
+  },
+  {
+    "userName": "Michael",
+    "securityIdentifier": "11111",
+    "cardEnding": "9999",
+    "case": "pending_review",
+    "transactionName": "Online Gaming Store",
+    "transactionTime": "2025-11-24 22:45:00",
+    "transactionCategory": "gaming",
+    "transactionSource": "steam.com",
+    "transactionAmount": "$59.99",
+    "location": "Global",
+    "securityQuestion": "What was the name of your first pet?",
+    "securityAnswer": "Buddy",
+    "outcomeNote": ""
+  }
+]
